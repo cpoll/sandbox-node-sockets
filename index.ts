@@ -5,19 +5,22 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const app: Express = express();
-const server = createServer(app);
-const port = process.env.PORT;
+async function main() {
+    const app: Express = express();
+    const server = createServer(app);
+    const port = process.env.PORT;
 
-app.use('/site', express.static('public'));
-app.get('/health', (req: Request, res: Response) => {
-  res.send('Express running');
-});
+    app.use('/site', express.static('public'));
+    app.get('/health', (req: Request, res: Response) => {
+        res.send('Express running');
+    });
 
-// Creates server at /socket.io/
-createSocketServer(server);
+    // Creates server at /socket.io/
+    await createSocketServer(server);
 
-server.listen(port, () => {
-  console.log(`Listening on ${port}`);
-});
+    server.listen(port, () => {
+        console.log(`Listening on ${port}`);
+    });
+}
 
+main();
