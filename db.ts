@@ -1,14 +1,15 @@
 import sqlite3 from 'sqlite3';
-import { open, Database } from 'sqlite';
+import BetterSqlite3 from 'better-sqlite3';
 
 export class DB {
-    constructor(private db: Database<sqlite3.Database, sqlite3.Statement>) { };
+    constructor(private db: BetterSqlite3.Database) { };
 
     public static async init() {
-        const db = await open({
-            filename: 'chat.db',
-            driver: sqlite3.Database
-        });
+        // const db = await open({
+        //     filename: 'chat.db',
+        //     driver: sqlite3.Database
+        // });
+        const db = new BetterSqlite3('chat.db', { verbose: console.log }); 
 
         await db.exec(`
         CREATE TABLE IF NOT EXISTS messages (
@@ -21,11 +22,11 @@ export class DB {
         return new DB(db);
     }
 
-    public async insertMessage(msg: string) {
-        return this.db.run('INSERT INTO messages (content) values (?)', msg)
+    public insertMessage(msg: string) {
+        return this.db.prepare('INSERT INTO messages (content) values (@content)').run({content: msg});
     }
 
-    public async eachMessage(id: number, callback: (err: any, row: any) => void) {
-        return this.db.each('SELECT * FROM messages WHERE id > ?', id, callback)
+    public getMessages(id: number) {
+        return this.db.prepare('SELECT id, content FROM messages WHERE id > (@id)').all({'id': id});
     }
 }

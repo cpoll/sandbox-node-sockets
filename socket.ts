@@ -12,7 +12,7 @@ export async function createSocketServer(server: HttpServer) {
     io.on('connection', async (socket) => {
         socket.on('chat message', async (msg) => {
             const result = await db.insertMessage(msg);
-            io.emit('chat message', msg, result.lastID);
+            io.emit('chat message', msg, result.lastInsertRowid);
         });
 
         socket.on('disconnect', () => {
@@ -20,9 +20,10 @@ export async function createSocketServer(server: HttpServer) {
         });
 
         if(!socket.recovered) {
-            await db.eachMessage(socket.handshake.auth.serverOffset || 0, (_err, row) => {
-                socket.emit('chat message', row.content, row.id);
-            })
+            const messages: any = db.getMessages(socket.handshake.auth.serverOffset || 0);
+            for (let message of messages) {
+                socket.emit('chat message', message.content, message.id);
+            }
         }
     });
 }
