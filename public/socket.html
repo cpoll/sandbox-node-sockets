@@ -69,9 +69,16 @@
 </body>
 <script src="/socket.io/socket.io.js"></script>
 <script>
+    let counter = 0;
+
     // No server required, defaults to connecting to the host serving this page
     const socket = io({
-        auth: {serverOffset: 0}
+        auth: {
+            serverOffset: 0,
+       },
+        ackTimeout: 5000,
+        retries: 3, // TODO: Test and add loading bar; can add a "disconnect" testing button for this
+ 
     });
 
     const form = document.getElementById("form");
@@ -81,7 +88,8 @@
     form.addEventListener('submit', (e) => {
         e.preventDefault();
         if (input.value) {
-            socket.emit('chat message', input.value);
+            const clientOffset = `${socket.id}-${counter++}`;
+            socket.emit('chat message', input.value, clientOffset);
             input.value = '';
         }
     });

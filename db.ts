@@ -1,5 +1,6 @@
-import sqlite3 from 'sqlite3';
 import BetterSqlite3 from 'better-sqlite3';
+
+export class DuplicateMessageError extends Error {}
 
 export class DB {
     constructor(private db: BetterSqlite3.Database) { };
@@ -22,8 +23,17 @@ export class DB {
         return new DB(db);
     }
 
-    public insertMessage(msg: string) {
-        return this.db.prepare('INSERT INTO messages (content) values (@content)').run({content: msg});
+    public insertMessage(msg: string, clientOffset: string) {
+        try {
+            return this.db.prepare('INSERT INTO messages (content, client_offset) values (@content, @clientOffset)').run({content: msg, clientOffset});
+        } catch (e) {
+            if(e instanceof BetterSqlite3.SqliteError && e.code === 'SQLITE_CONSTRAINT_UNIQUE' ) {
+                console.log('Duplicate message');
+                throw new DuplicateMessageError();
+            } else {
+                throw e;
+            }
+        }
     }
 
     public getMessages(id: number) {
