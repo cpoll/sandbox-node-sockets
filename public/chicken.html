@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>Socket.IO chat</title>
+    <style>
+        div.modal {
+            border: solid red 1px;
+            padding: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="roomId"></div>
+
+    <!-- Join Menu -->
+    <div class="modal" id="joinMenu">
+        <button onClick="createRoom();">Create Room</button>
+        <br />
+        <input id="joinId"></input>
+        <button onClick="joinRoom();">Join Room</button>
+        <br />
+        <button onClick="sendMessage();">Send Message Over Socket</button>
+    </div>
+
+    <!-- Area Picker -->
+    <div class="modal" id="pickArea">
+        Address: <input id="pickerAddress"></input><button onClick="pickAddress();">Go</button>
+    </div>
+
+
+    <div class="modal" id="vote"></div>
+    <div class="modal" id="results"></div>
+</body>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const joinMenu = document.getElementById('joinMenu');
+    const pickArea = document.getElementById('pickArea');
+    const vote = document.getElementById('vote');
+    const results = document.getElementById('results');
+
+    const modals = [joinMenu, pickArea, vote, results];
+    modals.forEach(m => m.classList.add('hidden'));
+    joinMenu.classList.remove('hidden');
+
+    let roomId;
+
+    // No server url parameter required; defaults to connecting to the host serving this page
+    const socket = io({
+        auth: {
+            serverOffset: 0,
+        },
+        ackTimeout: 5000,
+        retries: 3, // TODO: Test and add loading bar; can add a "disconnect" testing button for this
+    });
+
+    // Helpers
+    const setRoomId = (roomIdFromServer) => {
+        roomId = roomIdFromServer;
+        document.getElementById('roomId').innerHTML = `Room ID: ${roomId}`;
+    }
+
+    // Buttons
+    const createRoom = () => {
+        modals.forEach(m => m.classList.add('hidden'));
+        pickArea.classList.remove('hidden');
+    }
+
+    const pickAddress = () => {
+        modals.forEach(m => m.classList.add('hidden'));
+        vote.classList.remove('hidden');
+
+        const address = document.getElementById('pickerAddress').value;
+
+        socket.emit('clientEvent', { type: 'startRoom', address: address }, (_err, response) => {
+            setRoomId(response.roomId);
+        })
+    }
+
+    const joinRoom = () => {
+        socket.emit(
+            'clientEvent',
+            { type: 'joinRoom', roomId: document.getElementById('joinId').value },
+            (_err, response) => {
+                if (response.error) {
+                    alert('Room does not exist');
+                    return;
+                };
+
+                setRoomId(response.roomId);
+
+                modals.forEach(m => m.classList.add('hidden'));
+                vote.classList.remove('hidden');
+
+            });
+    }
+
+
+
+    const sendMessage = () => {
+        socket.emit('clientEvent', { type: 'hello', message: 'Hello, world!' });
+    }
+
+    // Server Events
+    socket.on('serverEvent', (event) => {
+        switch (event.type) {
+            default:
+                console.error('invalid server event', event);
+                break;
+        }
+
+        console.log('Received server event:', event);
+    });
+
+    // const form = document.getElementById("form");
+    // const input = document.getElementById("input");
+    // const messages = document.getElementById("messages");
+
+    // form.addEventListener('submit', (e) => {
+    //     e.preventDefault();
+    //     if (input.value) {
+    //         const clientOffset = `${socket.id}-${counter++}`;
+    //         socket.emit('chat message', input.value, clientOffset);
+    //         input.value = '';
+    //     }
+    // });
+
+    // Received a message from the server
+    // socket.on('chat message', (msg, serverOffset) => {
+    //     // TODO: Not clear if this is possible.
+    //     if (serverOffset > socket.auth.serverOffset + 1) {
+    //         alert(`Server offset is too far ahead! Server: ${serverOffset}, Client: ${socket.auth.serverOffset}`);
+    //         throw new Error(`Client offset is too far behind! Server: ${serverOffset}, Client: ${socket.auth.serverOffset}`);
+    //     }
+
+    //     const item = document.createElement('li');
+    //     item.textContent = msg;
+    //     messages.appendChild(item);
+    //     window.scrollTo(0, document.body.scrollHeight);
+
+    //     socket.auth.serverOffset = serverOffset;
+    // });
+
+</script>
+
+</html>

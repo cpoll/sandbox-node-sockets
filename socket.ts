@@ -1,6 +1,7 @@
 import { Server as HttpServer } from "http";
 import { Server, ServerOptions } from "socket.io";
 import { DB, DuplicateMessageError } from "./db";
+import { randomInt } from "crypto";
 
 /**
  * Serverside for socket connection
@@ -18,39 +19,74 @@ import { DB, DuplicateMessageError } from "./db";
 
 
 export async function createSocketServer(server: HttpServer) {
-    const db = await DB.init();
+    // const db = await DB.init();
 
     const options: Partial<ServerOptions> = {
         connectionStateRecovery: {}
     }
     const io = new Server(server, options);
 
+
+    // Room state (this should be in a DB in the future)
+    type Room = {
+        address: string
+        users: Array<number>
+    }
+    let rooms: { [id: string]: Room } = {};
+
+    const createRoom = (address: string) => {
+        const roomId = "ABCDEFGHJKLM"[randomInt(0, 12)] + "NOPRSTUXYZ"[randomInt(0, 10)] + randomInt(0, 10);
+        rooms[roomId] = {
+            'address': address,
+            'users': []
+        };
+
+        return roomId;
+    }
+
     io.on('connection', async (socket) => {
+        console.log('a user connected');
 
-        /**
-         * Client sends us a chat message.
-         * @param msg Client's message
-         * @param clientOffset UniqueId for the message, in the form of `${socket.id}-${counter++}`
-         * @param callback Let the client know the message was recieved
-         */
-        socket.on('chat message', async (msg, clientOffset, callback) => {
-            let result;
-            try {
-                result = await db.insertMessage(msg, clientOffset);
-            } catch (e) {
-                // If it's a duplicate, we still inform the client we recieved it, so they stop sending it.
-                if (e instanceof DuplicateMessageError) {
+        const playerId = randomInt(1, 1000000);
+
+        //socket.emit('serverEvent', { 'type': 'hello' });
+
+        socket.on('clientEvent', (event, callback) => {
+            switch (event.type) {
+                case 'startRoom':
+                    const roomId = createRoom(event.address);
+                    rooms[roomId].users.push(playerId);
+                    callback({ 'roomId': roomId });
+                    break;
+                case 'joinRoom':
+                    console.log('client trying to join', event);
+                    if (rooms[event.roomId]) {
+                        rooms[event.roomId].users.push(playerId);
+                        callback({ 'roomId': event.roomId });
+                    } else {
+                        callback({ 'error': 'room not found' });
+                    }
+                default:
+                    console.error('bad event:', event);
                     callback();
-                } else {
-                    // Otherwise, don't send a callback; let the client retry.
-                    // TODO: Add client logic to do something if the last retry fails
-                }
-                return;
-            }
+                    break;
 
-            // Let all clients know about the new message. 
-            io.emit('chat message', msg, result.lastInsertRowid);
-            callback(); // Acknowledge the event
+            }
+            // try {
+            //     result = await db.insertMessage(msg, clientOffset);
+            // } catch (e) {
+            //     // If it's a duplicate, we still inform the client we recieved it, so they stop sending it.
+            //     if (e instanceof DuplicateMessageError) {
+            //         callback();
+            //     } else {
+            //         // Otherwise, don't send a callback; let the client retry.
+            //         // TODO: Add client logic to do something if the last retry fails
+            //     }
+            //     return;
+            // }
+
+            // // Let all clients know about the new message. 
+            // io.emit('chat message', msg, result.lastInsertRowid);
         });
 
         // Client disconnects
@@ -59,12 +95,12 @@ export async function createSocketServer(server: HttpServer) {
         });
 
         // Client connection state wasn't recovered during last reconnection
-        if (!socket.recovered) {
-            // Send the client all the messages they haven't yet seen
-            const messages: any = db.getMessages(socket.handshake.auth.serverOffset || 0);
-            for (let message of messages) {
-                socket.emit('chat message', message.content, message.id);
-            }
-        }
+        // if (!socket.recovered) {
+        //     // Send the client all the messages they haven't yet seen
+        //     const messages: any = db.getMessages(socket.handshake.auth.serverOffset || 0);
+        //     for (let message of messages) {
+        //         socket.emit('chat message', message.content, message.id);
+        //     }
+        // }
     });
 }
