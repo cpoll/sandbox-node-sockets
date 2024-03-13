@@ -18,6 +18,7 @@
 
 <body>
     <div id="roomId"></div>
+    <div id="users"></div>
 
     <!-- Join Menu -->
     <div class="modal" id="joinMenu">
@@ -109,7 +110,16 @@
 
     // Server Events
     socket.on('serverEvent', (event) => {
+        // TODO: Sending events to _everyone_ is hilariously bad
+        if (event.roomId !== roomId) { return; }
+
         switch (event.type) {
+            case "userJoined":
+                document.getElementById('users').innerHTML = event.users;
+                break;
+            case "results":
+                modals.forEach(m => m.classList.add('hidden'));
+                results.classList.remove('hidden');
             default:
                 console.error('invalid server event', event);
                 break;

@@ -18,7 +18,12 @@ async function main() {
 
     // http://localhost:8000/restaurants?lat=43.676173&long=-79.358705
     app.get('/restaurants', async (req: Request, res: Response) => {
-        const restaurants = await OverpassClient.getRestarauntsByGPS(req.query.lat as unknown as number, req.query.long as unknown as number);
+        const restaurants = await OverpassClient.getRestaurantsByGPS(req.query.lat as unknown as number, req.query.long as unknown as number);
+        res.json(restaurants);
+    });
+
+    app.get('/restaurants/address', async (req: Request, res: Response) => {
+        const restaurants = await OverpassClient.getRestaurantsAroundAddress();
         res.json(restaurants);
     });
 
