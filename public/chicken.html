@@ -5,39 +5,58 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>Socket.IO chat</title>
     <style>
-        div.modal {
-            border: solid red 1px;
-            padding: 20px;
-        }
-
         .hidden {
             display: none;
         }
     </style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark" />
 </head>
 
 <body>
-    <div id="roomId"></div>
-    <div id="users"></div>
+    <main class="container">
+        <div id="roomId"></div>
+        <div id="users"></div>
 
-    <!-- Join Menu -->
-    <div class="modal" id="joinMenu">
-        <button onClick="createRoom();">Create Room</button>
-        <br />
-        <input id="joinId"></input>
-        <button onClick="joinRoom();">Join Room</button>
-        <br />
-        <button onClick="sendMessage();">Send Message Over Socket</button>
-    </div>
+        <!-- Join Menu -->
+        <div class="modal container" id="joinMenu">
+            <section class="grid">
+                <button class="outline" onClick="createRoom();">Create Room</button>
+            </section>
+            <section class="grid">
+                <input id="joinId"></input>
+                <button class="outline secondary" onClick="joinRoom();">Join Room</button>
+            </section>
+            <section>
+                <button onClick="sendMessage();">Send Message Over Socket</button>
+            </section>
+        </div>
 
-    <!-- Area Picker -->
-    <div class="modal" id="pickArea">
-        Address: <input id="pickerAddress"></input><button onClick="pickAddress();">Go</button>
-    </div>
+        <!-- Area Picker -->
+        <div class="modal container" id="pickArea">
+            Address: <input id="pickerAddress"></input><button onClick="pickAddress();">Go</button>
+        </div>
 
 
-    <div class="modal" id="vote"></div>
-    <div class="modal" id="results"></div>
+        <div class="modal container" id="vote"></div>
+        <div class="modal container" id="results"></div>
+
+        <dialog id="message-modal">
+            <article>
+                <header>
+                    <button aria-label="Close" rel="prev" data-target="modal-example"
+                        onclick="closeMessageModal()"></button>
+                    <h3></h3>
+                </header>
+                <p></p>
+                <footer>
+                    <button role="button" class="primary" data-target="modal-example"
+                        onclick="closeMessageModal()">Ok</button>
+                </footer>
+            </article>
+        </dialog>
+    </main>
 </body>
 <script src="/socket.io/socket.io.js"></script>
 <script>
@@ -85,12 +104,13 @@
     }
 
     const joinRoom = () => {
+        const roomId = document.getElementById('joinId').value;
         socket.emit(
             'clientEvent',
-            { type: 'joinRoom', roomId: document.getElementById('joinId').value },
+            { type: 'joinRoom', roomId: roomId },
             (_err, response) => {
                 if (response.error) {
-                    alert('Room does not exist');
+                    openMessageModal('Join Room', `Room does not exist`);
                     return;
                 };
 
@@ -127,6 +147,17 @@
 
         console.log('Received server event:', event);
     });
+
+
+    const closeMessageModal = () => {
+        document.getElementById('message-modal')?.removeAttribute('open');
+    };
+
+    const openMessageModal = (header, message) => {
+        document.getElementById('message-modal').querySelector('h3').textContent = header;
+        document.getElementById('message-modal').querySelector('p').textContent = message;
+        document.getElementById('message-modal').setAttribute('open', '');
+    };
 
     // const form = document.getElementById("form");
     // const input = document.getElementById("input");
